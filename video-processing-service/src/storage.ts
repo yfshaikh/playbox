@@ -1,6 +1,8 @@
 import { Storage } from "@google-cloud/storage";
 import fs from 'fs';
 import ffmpeg from 'fluent-ffmpeg';
+import sharp from 'sharp';
+import path from "path";
 
 // Initialize Google Cloud Storage client
 const storage = new Storage();
@@ -25,7 +27,6 @@ export function setupDirectories() {
   ensureDirectoryExistence(localProcessedVideoPath);
   ensureDirectoryExistence(localThumbnailPath);
 }
-
 
 /**
  * Converts a video file from raw format to a processed 360p format.
@@ -138,6 +139,60 @@ function deleteFile(filePath: string): Promise<void> {
     }
   });
 }
+
+
+
+/*
+ *
+ *
+ * THUMBNAILS
+ * 
+ * 
+ * /
+
+
+
+/**
+ * Converts an image to a thumbnail (resized).
+ * @param inputImageName - The name of the original image.
+ * @param outputImageName - The name of the thumbnail to be created.
+ * @returns A promise that resolves when the thumbnail is created.
+ */
+export async function createThumbnail(inputImageName: string, outputImageName: string) {
+  const inputPath = path.join(localThumbnailPath, inputImageName);
+  const outputPath = path.join(localThumbnailPath, outputImageName);
+
+  return sharp(inputPath)
+    .resize(200, 200) // Resize to thumbnail size
+    .toFile(outputPath)
+    .then(() => {
+      console.log('Thumbnail created successfully');
+    })
+    .catch((err) => {
+      console.error('Error creating thumbnail:', err.message);
+      throw err;
+    });
+}
+
+/**
+ * Uploads a thumbnail file to the Cloud Storage bucket.
+ * @param fileName - The name of the thumbnail to upload.
+ * @returns A promise that resolves when the file is uploaded.
+ */
+export async function uploadThumbnail(fileName: string) {
+  const bucket = storage.bucket(thumbnailBucketName);
+
+  // Upload the thumbnail to Cloud Storage
+  await bucket.upload(path.join(localThumbnailPath, fileName), {
+    destination: fileName,
+  });
+
+  console.log(`Thumbnail uploaded to gs://${thumbnailBucketName}/${fileName}`);
+
+  // Make the thumbnail publicly accessible
+  await bucket.file(fileName).makePublic();
+}
+
 
 
 

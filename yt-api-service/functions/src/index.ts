@@ -15,8 +15,9 @@ initializeApp();
 const storage = new Storage();
 const firestore = new Firestore();
 
-// Bucket name for raw videos
+// Bucket names
 const rawVideoBucketName = "raw-videos-yt";
+const thumbnailBucketName = "thumbnail-bucket-yt";
 
 
 // Cloud Function to generate an upload URL
@@ -31,10 +32,26 @@ export const generateUploadUrl = onCall({maxInstances: 1}, async (request) => {
 
   const auth = request.auth;
   const data = request.data;
-  const bucket = storage.bucket(rawVideoBucketName);
+  const { fileType, fileExtension } = data; // Expect fileType (video or thumbnail) from the client
+  
+  let bucketName;
+  let fileName;
 
-  // Generate a unique filename for upload
-  const fileName = `${auth.uid}-${Date.now()}.${data.fileExtension}`;
+  // Determine if the file is a video or thumbnail and set the appropriate bucket
+  if (fileType === "video") {
+    bucketName = rawVideoBucketName; // Use the video bucket for videos
+    fileName = `${auth.uid}-${Date.now()}.${fileExtension}`; // Generate a unique filename for video
+  } else if (fileType === "thumbnail") {
+    bucketName = thumbnailBucketName; // Use the thumbnail bucket for thumbnails
+    fileName = `thumbnail-${auth.uid}-${Date.now()}.${fileExtension}`; // Generate a unique filename for thumbnail
+  } else {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Invalid file type. Must be 'video' or 'thumbnail'."
+    );
+  }
+
+  const bucket = storage.bucket(bucketName);
 
   // Get a v4 signed URL for uploading file
   const [url] = await bucket.file(fileName).getSignedUrl({
