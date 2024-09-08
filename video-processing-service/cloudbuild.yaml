@@ -1,0 +1,14 @@
+steps:
+  - name: "docker"
+    args: ["buildx", "create", "--use"]
+  - name: "docker"
+    args:
+      [
+        "buildx",
+        "build",
+        "--platform=linux/amd64,linux/arm64",
+        "-t",
+        "us-central1-docker.pkg.dev/yt-clone-6be4c/video-processing-repo/video-processing-service:latest",
+        "--push",
+        ".",
+      ]
