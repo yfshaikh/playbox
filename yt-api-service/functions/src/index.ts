@@ -7,6 +7,7 @@ import {Firestore} from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import {Storage} from "@google-cloud/storage";
 import {onCall} from "firebase-functions/v2/https";
+import { CallableRequest } from "firebase-functions/v2/https";
 
 // Initialize Firebase Admin
 initializeApp();
@@ -98,4 +99,24 @@ export const getVideos = onCall({maxInstances: 1}, async () => {
     await firestore.collection(videoCollectionId).limit(10).get();
   return querySnapshot.docs.map((doc) => doc.data());
 });
+
+
+
+export const getThumbnail = onCall({ maxInstances: 1 }, async (request: CallableRequest<any>) => {
+  const { thumbnailId } = request.data; // Access data from the request object
+
+  if (!thumbnailId) {
+    throw new functions.https.HttpsError('invalid-argument', 'Thumbnail ID is required');
+  }
+
+  const docRef = firestore.collection('thumbnails').doc(thumbnailId);
+  const doc = await docRef.get();
+
+  if (!doc.exists) {
+    throw new functions.https.HttpsError('not-found', 'Thumbnail not found');
+  }
+
+  return doc.data(); // Return the thumbnail data
+});
+
 

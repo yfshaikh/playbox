@@ -1,5 +1,5 @@
 import express from 'express';
-import { isVideoNew, setVideo } from "./firestore";
+import { isThumbnailNew, isVideoNew, setThumbnail, setVideo } from "./firestore";
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
@@ -12,7 +12,8 @@ import {
   convertVideo,
   createThumbnail,
   uploadThumbnail,
-  setupDirectories
+  setupDirectories,
+  downloadThumbnail
 } from './storage';
 import { platform } from 'os';
 
@@ -123,25 +124,45 @@ app.post('/process-thumbnail', async (req, res) => {
   }
 
   const inputFileName = data.name; // Name of the original image file
-  const outputFileName = `thumbnail-${inputFileName}`; // Name of the thumbnail file
-  const imageId = inputFileName.split('.')[0];
+  console.log(`inputFileName: ${inputFileName}`)
+  const outputFileName = `processed-${inputFileName}`; // Name of the thumbnail file
+  console.log(`outputFileName: ${outputFileName}`)
+  const thumbnailId = inputFileName.split('.')[0];
 
 
   try {
 
-    // Create the thumbnail using the createThumbnail function
+
+    // raw thumbnail is uploaded to cloud bucket by user
+    
+    
+    // Download the thumbnail from the raw bucket and save it to localRawThumbnailPath/inputFileName
+    await downloadThumbnail(inputFileName);
+
+
+    // get the thumbnail from local folder and resize, then save it to output folder
     await createThumbnail(inputFileName, outputFileName);
 
-    // Upload the thumbnail to Cloud Storage
-    await uploadThumbnail(outputFileName);
+    // upload output/processed thumbnail to the processed bucket
+    await uploadThumbnail(outputFileName); 
+    
 
-    /*
-    // Update the image status to processed (simulated here)
-    await setImage(imageId, {
+    if (!isThumbnailNew(thumbnailId)) {
+      return res.status(400).send('Bad Request: thumbnail already processing or processed.');
+    } else {
+      await setThumbnail(thumbnailId, {
+        id: thumbnailId,
+        uid: thumbnailId.split('-')[0],
+        status: 'processing'
+      });
+    }
+
+
+    await setThumbnail(thumbnailId, {
       status: 'processed',
-      filename: outputFileName,
+      filename: outputFileName
     });
-    */
+
 
     /*
     // delete local files after processing

@@ -11,12 +11,15 @@ const storage = new Storage();
 // Define bucket names for raw/processed videos and thumbnails
 const rawVideoBucketName = "raw-videos-yt";
 const processedVideoBucketName = "processed-videos-yt";
-const thumbnailBucketName = "thumbnail-bucket-yt";
+const rawThumbnailBucketName = "thumbnail-bucket-yt";
+const processedThumbnailBucketName = "processed-thumbnail-bucket-yt";
 
 // Define local paths for storing raw/processed videos and thumbnails
 const localRawVideoPath = "./raw-videos";
 const localProcessedVideoPath = "./processed-videos";
-const localThumbnailPath = "./thumbnails";
+const localRawThumbnailPath = "./raw-thumbnails";
+const localProcessedThumbnailPath = "./processed-thumbnails";
+
 
 
 /**
@@ -25,7 +28,8 @@ const localThumbnailPath = "./thumbnails";
 export function setupDirectories() {
   ensureDirectoryExistence(localRawVideoPath);
   ensureDirectoryExistence(localProcessedVideoPath);
-  ensureDirectoryExistence(localThumbnailPath);
+  ensureDirectoryExistence(localRawThumbnailPath);
+  ensureDirectoryExistence(localProcessedThumbnailPath);
 }
 
 /**
@@ -149,6 +153,26 @@ function deleteFile(filePath: string): Promise<void> {
  * 
  * 
  * /
+ 
+/**
+ * Downloads a thumbnail from the specified Cloud Storage bucket.
+ * @param fileName - The name of the file to download from the 
+ * {@link thumbnailBucketName} bucket into the {@link localThumbnailPath} folder.
+ * @returns A promise that resolves when the file has been downloaded.
+ */
+export async function downloadThumbnail(fileName: string) {
+  
+  await storage.bucket(rawThumbnailBucketName)
+    .file(fileName)
+    .download({
+      destination: `${localRawThumbnailPath}/${fileName}`, // Save to local raw thumbnail path
+    });
+
+  console.log(
+    `gs://${rawThumbnailBucketName}/${fileName} downloaded to ${localRawThumbnailPath}/${fileName}.`
+  );
+  
+}
 
 
 
@@ -159,8 +183,8 @@ function deleteFile(filePath: string): Promise<void> {
  * @returns A promise that resolves when the thumbnail is created.
  */
 export async function createThumbnail(inputImageName: string, outputImageName: string) {
-  const inputPath = path.join(localThumbnailPath, inputImageName);
-  const outputPath = path.join(localThumbnailPath, outputImageName);
+  const inputPath = path.join(localRawThumbnailPath, inputImageName);
+  const outputPath = path.join(localProcessedThumbnailPath, outputImageName);
 
   return sharp(inputPath)
     .resize(200, 200) // Resize to thumbnail size
@@ -174,20 +198,24 @@ export async function createThumbnail(inputImageName: string, outputImageName: s
     });
 }
 
+
 /**
  * Uploads a thumbnail file to the Cloud Storage bucket.
  * @param fileName - The name of the thumbnail to upload.
  * @returns A promise that resolves when the file is uploaded.
  */
 export async function uploadThumbnail(fileName: string) {
-  const bucket = storage.bucket(thumbnailBucketName);
 
-  // Upload the thumbnail to Cloud Storage
-  await bucket.upload(path.join(localThumbnailPath, fileName), {
+  const bucket = storage.bucket(processedThumbnailBucketName);
+
+  // Upload the thumbnail to the bucket
+  await storage.bucket(processedThumbnailBucketName)
+  .upload(`${localProcessedThumbnailPath}/${fileName}`, {
     destination: fileName,
   });
-
-  console.log(`Thumbnail uploaded to gs://${thumbnailBucketName}/${fileName}`);
+  console.log(
+  `${localProcessedThumbnailPath}/${fileName} uploaded to gs://${processedThumbnailBucketName}/${fileName}.`
+);
 
   // Make the thumbnail publicly accessible
   await bucket.file(fileName).makePublic();

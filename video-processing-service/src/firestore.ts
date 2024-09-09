@@ -16,6 +16,7 @@ const firestore = new Firestore();
 
 
 const videoCollectionId = 'videos';
+const thumbnailCollectionId = 'thumbnails';
 
 export interface Video {
   id?: string,
@@ -23,12 +24,27 @@ export interface Video {
   filename?: string,
   status?: 'processing' | 'processed',
   title?: string,
-  description?: string
+  description?: string,
+  thumbnailUrl?: string, // URL of the thumbnail image
+}
+
+export interface Thumbnail {
+  id?: string,
+  uid?: string,
+  filename?: string,
+  status?: 'processing' | 'processed',
+  title?: string,
+  description?: string,
 }
 
 async function getVideo(videoId: string) {
   const snapshot = await firestore.collection(videoCollectionId).doc(videoId).get();
   return (snapshot.data() as Video) ?? {};
+}
+
+async function getThumbnail(thumbnailId: string) {
+  const snapshot = await firestore.collection(thumbnailCollectionId).doc(thumbnailId).get();
+  return (snapshot.data() as Thumbnail) ?? {};
 }
 
 export function setVideo(videoId: string, video: Video) {
@@ -38,7 +54,19 @@ export function setVideo(videoId: string, video: Video) {
     .set(video, { merge: true })
 }
 
+export function setThumbnail(thumbnailId: string, thumbnail: Thumbnail) {
+  return firestore
+    .collection(thumbnailCollectionId)
+    .doc(thumbnailId)
+    .set(thumbnail, { merge: true })
+}
+
 export async function isVideoNew(videoId: string) {
   const video = await getVideo(videoId);
   return video?.status === undefined;
+}
+
+export async function isThumbnailNew(thumbnailId: string) {
+  const thumbnail = await getThumbnail(thumbnailId);
+  return thumbnail?.status === undefined;
 }
