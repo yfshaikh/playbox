@@ -18,7 +18,7 @@ const firestore = new Firestore();
 
 // Bucket names
 const rawVideoBucketName = "raw-videos-yt";
-const thumbnailBucketName = "thumbnail-bucket-yt";
+const rawThumbnailBucketName = "thumbnail-bucket-yt";
 
 
 // Cloud Function to generate an upload URL
@@ -37,13 +37,16 @@ export const generateUploadUrl = onCall({maxInstances: 1}, async (request) => {
   
   let bucketName;
   let fileName;
+  let id;
 
   // Determine if the file is a video or thumbnail and set the appropriate bucket
   if (fileType === "video") {
     bucketName = rawVideoBucketName; // Use the video bucket for videos
+    id = `${auth.uid}-${Date.now()}`; // Generate a unique videoId
     fileName = `${auth.uid}-${Date.now()}.${fileExtension}`; // Generate a unique filename for video
   } else if (fileType === "thumbnail") {
-    bucketName = thumbnailBucketName; // Use the thumbnail bucket for thumbnails
+    bucketName = rawThumbnailBucketName; // Use the thumbnail bucket for thumbnails
+    id = `thumbnail-${auth.uid}-${Date.now()}`; // Generate a unique videoId
     fileName = `thumbnail-${auth.uid}-${Date.now()}.${fileExtension}`; // Generate a unique filename for thumbnail
   } else {
     throw new functions.https.HttpsError(
@@ -61,7 +64,7 @@ export const generateUploadUrl = onCall({maxInstances: 1}, async (request) => {
     expires: Date.now() + 15 * 60 * 1000, // 15 minutes
   });
 
-  return {url, fileName};
+  return {url, fileName, id};
 });
 
 // Cloud Function to handle new user creation
@@ -92,6 +95,7 @@ export interface Video {
   status?: "processing" | "processed",
   title?: string,
   description?: string,
+  thumbnail?: string,
 }
 
 export const getVideos = onCall({maxInstances: 1}, async () => {
@@ -118,5 +122,49 @@ export const getThumbnail = onCall({ maxInstances: 1 }, async (request: Callable
 
   return doc.data(); // Return the thumbnail data
 });
+
+export const setThumbnail = onCall({ maxInstances: 1 }, async (request: CallableRequest<any>) => {
+  const { videoId, thumbnailId } = request.data;
+  console.log(`Received request to update video: ${videoId} with thumbnail: ${thumbnailId}`);
+
+  if (!videoId) {
+    console.error('Video ID is missing');
+    throw new functions.https.HttpsError('invalid-argument', 'Video ID is required');
+  }
+
+  if (!thumbnailId) {
+    console.error('Thumbnail ID is missing');
+    throw new functions.https.HttpsError('invalid-argument', 'Thumbnail ID is required');
+  }
+
+  const docRef = firestore.collection('videos').doc(videoId);
+
+  try {
+    console.log(`Fetching document for videoId: ${videoId}`);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      console.error(`Video with ID ${videoId} not found`);
+      throw new functions.https.HttpsError('not-found', 'Video not found');
+    }
+
+    console.log(`Document exists for videoId: ${videoId}. Updating with thumbnailId: ${thumbnailId}`);
+
+
+    // Update the document with the thumbnail ID
+    await docRef.update({
+      thumbnail: thumbnailId,
+    });
+
+    console.log(`Successfully updated video ${videoId} with thumbnail ${thumbnailId}`);
+
+
+    return { success: true }; // return success status
+  } catch (error) {
+    console.error('Error updating thumbnail:', error);
+    throw new functions.https.HttpsError('internal', 'Error updating thumbnail');
+  }
+});
+
 
 

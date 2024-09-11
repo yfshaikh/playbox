@@ -20,7 +20,8 @@ const app = initializeApp(firebaseConfig);
 // const analytics = getAnalytics(app);
 const auth = getAuth(app);
 
-export const functions = getFunctions();
+export default app;
+export const functions = getFunctions(app, "us-central1");
 
 
 /**
