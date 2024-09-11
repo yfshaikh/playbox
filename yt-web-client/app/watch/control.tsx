@@ -71,7 +71,7 @@ export default function Control ({playing, onPlayPause, onForward, onRewind, pla
         <>
             <div className={styles.control_Container} ref={controlRef}>
                     <div className={styles.top__container}>
-                        <h2>Video Player</h2>
+                        
                     </div>
                       {/* { Leaving out the play/rewind/fastforward buttons for now} */}
                       {/* {

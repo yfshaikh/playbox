@@ -1,4 +1,48 @@
+.main {
+  margin-top: 10px;
+}
+
+.video_container {
+  display: flex;
+  gap: 10px;
+}
+
+
 .thumbnail {
-    margin: 10px;
-    border-radius: 10px;
+  width: 350px;
+  height: 150px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); 
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  margin-bottom: 20px;
+}
+
+
+.thumbnail::before {
+  content: "";
+  display: block;
+  padding-top: 56.25%; 
+}
+
+
+.thumbnail img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Ensure the image covers the container */
+  border-radius: 10px;
+}
+
+.thumbnail:hover {
+  transform: translateY(-5px); 
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); 
+}
+
+
+@media (max-width: 768px) {
+  .thumbnail {
+    max-width: 100%; 
   }
+}

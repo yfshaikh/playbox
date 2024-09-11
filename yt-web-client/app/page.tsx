@@ -8,14 +8,14 @@ export default async function Home() {
   const videos = await getVideos(); // Fetch video data
 
   return (
-    <main>
-      {videos.map((video) => (
-        <Link href={`/watch?v=${video.filename}`} key={video.id}>
-          <Thumbnail thumbnailId={video.thumbnail} />
-          {/* <Image src={'/thumbnail.png'} alt='video' width={300} height={150}
-        className={styles.thumbnail}/> */}
-        </Link>
-      ))}
+    <main className={styles.main}>
+      <div className={styles.video_container}>
+        {videos.map((video) => (
+          <Link href={`/watch?v=${video.filename}`} key={video.id}>
+              <Thumbnail thumbnailId={video.thumbnail} />
+          </Link>
+        ))}
+      </div>
     </main>
   );
 }

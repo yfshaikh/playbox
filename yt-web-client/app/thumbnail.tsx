@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { getThumbnail } from './firebase/functions'; // Import directly here
+import stlyes from './page.module.css'
 
 function Thumbnail({ thumbnailId }) {
   const [thumbnail, setThumbnail] = useState<string | null>(null);
@@ -35,6 +36,7 @@ function Thumbnail({ thumbnailId }) {
           alt={`Thumbnail for ${thumbnailId}`}
           width={200}  
           height={120} 
+          className={stlyes.thumbnail}
         />
       ) : (
         <p>Loading thumbnail...</p> // Display loading message while fetching
