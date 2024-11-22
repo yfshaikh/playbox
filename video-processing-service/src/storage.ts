@@ -33,26 +33,36 @@ export function setupDirectories() {
 }
 
 /**
- * Converts a video file from raw format to a processed 360p format.
+ * Converts a video file from raw format to a processed 360p MP4 format.
  * @param rawVideoName - The name of the file to convert from {@link localRawVideoPath}.
  * @param processedVideoName - The name of the file to convert to {@link localProcessedVideoPath}.
  * @returns A promise that resolves when the video has been converted.
  */
 export function convertVideo(rawVideoName: string, processedVideoName: string) {
   return new Promise<void>((resolve, reject) => {
+    // Ensure the processed video name ends with .mp4
+    const outputFileName = processedVideoName.endsWith(".mp4")
+      ? processedVideoName
+      : `${processedVideoName.split(".")[0]}.mp4`;
+
     ffmpeg(`${localRawVideoPath}/${rawVideoName}`)
-      .outputOptions("-vf", "scale=-1:360") // video filter, scale to 360p
-      .on("end", function () { // when completed successfully
+      .outputOptions("-vf", "scale=-1:360") // Video filter: scale to 360p
+      .outputOptions("-c:v", "libx264") // Video codec: H.264 for MP4
+      .outputOptions("-preset", "fast") // Encoding speed: balance between speed and compression
+      .outputOptions("-crf", "23") // Quality setting: 0 (lossless) to 51 (worst)
+      .outputOptions("-c:a", "aac") // Audio codec: AAC for MP4
+      .on("end", function () { // When completed successfully
         console.log("Processing finished successfully");
         resolve(); // Resolve the promise
       })
-      .on("error", function (err: any) { // when error
-        console.log("An error occurred: " + err.message);
+      .on("error", function (err: any) { // On error
+        console.error("An error occurred: " + err.message);
         reject(err); // Reject the promise with the error
       })
-      .save(`${localProcessedVideoPath}/${processedVideoName}`); // Save processed video to local path
+      .save(`${localProcessedVideoPath}/${outputFileName}`); // Save processed video to local path
   });
 }
+
 
 
 /**
@@ -82,18 +92,19 @@ export async function downloadRawVideo(fileName: string) {
  */
 export async function uploadProcessedVideo(fileName: string) {
   const bucket = storage.bucket(processedVideoBucketName);
+  const outputFileName = fileName.endsWith('.mp4') ? fileName : `${fileName.split(".")[0]}.mp4`;
 
    // Upload the video to the processed video bucket
   await storage.bucket(processedVideoBucketName)
-    .upload(`${localProcessedVideoPath}/${fileName}`, {
-      destination: fileName,
+    .upload(`${localProcessedVideoPath}/${outputFileName}`, {
+      destination: outputFileName,
     });
   console.log(
-    `${localProcessedVideoPath}/${fileName} uploaded to gs://${processedVideoBucketName}/${fileName}.`
+    `${localProcessedVideoPath}/${outputFileName} uploaded to gs://${processedVideoBucketName}/${outputFileName}.`
   );
 
   // Set the video to be publicly readable
-  await bucket.file(fileName).makePublic();
+  await bucket.file(outputFileName).makePublic();
 }
 
 
@@ -116,7 +127,8 @@ export function deleteRawVideo(fileName: string) {
 * 
 */
 export function deleteProcessedVideo(fileName: string) {
-  return deleteFile(`${localProcessedVideoPath}/${fileName}`);
+  const outputFileName = fileName.endsWith('.mp4') ? fileName : `${fileName.split(".")[0]}.mp4`;
+  return deleteFile(`${localProcessedVideoPath}/${outputFileName}`);
 }
 
 
