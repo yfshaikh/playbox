@@ -45,17 +45,25 @@ export function convertVideo(rawVideoName: string, processedVideoName: string, h
       ? processedVideoName
       : `${processedVideoName.split(".")[0]}.mp4`;
 
-    ffmpeg(`${localRawVideoPath}/${rawVideoName}`)
-      .outputOptions("-vf", `scale=-1:${height}`) // Scale to dynamic height
-      .outputOptions("-c:v", "libx264")
-      .outputOptions("-preset", "fast")
-      .outputOptions("-crf", "23")
-      .outputOptions("-c:a", "aac")
-      .on("end", () => resolve())
-      .on("error", (err: any) => reject(err))
-      .save(`${localProcessedVideoPath}/${outputFileName}`);
+    const inputFile = `${localRawVideoPath}/${rawVideoName}`;
+    const outputFile = `${localProcessedVideoPath}/${outputFileName}`;
+
+    ffmpeg.ffprobe(inputFile, (err, metadata) => {
+      if (err) {
+        reject(err);
+      } else {
+        const frameRate = metadata.streams[0].r_frame_rate; // Get the frame rate of the original video
+
+        ffmpeg(inputFile)
+          .outputOptions("-vf", `scale=-1:${height}`)
+          .on("end", () => resolve())
+          .on("error", (err: any) => reject(err))
+          .save(outputFile);
+      }
+    });
   });
 }
+
 
 
 
