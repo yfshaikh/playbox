@@ -31,8 +31,7 @@ export default function Watch() {
       const updatedVideoUrl = `${videoPrefix}processed-${videoId}_${resolution}.mp4`;
       setVideoUrl(updatedVideoUrl);
     }
-  }, [resolution, videoId]); // This ensures the video URL updates when resolution or videoId changes
-
+  }, [resolution, videoId]); 
   
   useEffect(() => {
     if (videoId) {
