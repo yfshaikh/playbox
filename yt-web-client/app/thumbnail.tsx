@@ -39,7 +39,13 @@ function Thumbnail({ thumbnailId }) {
           className={stlyes.thumbnail}
         />
       ) : (
-        <p>Loading thumbnail...</p> // Display loading message while fetching
+        <Image
+          src='/default_thumbnail.png'
+          alt={`Default thumbnail`}
+          width={200}  
+          height={120} 
+          className={stlyes.thumbnail}
+        />
       )}
     </div>
   );

@@ -1,121 +1,205 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import popup_styles from './popup.module.css'
-import upload_styles from './upload.module.css'
+import styles from './Popup.module.css'; // Import the CSS module
 import { uploadVideo } from '../firebase/functions';
 import { uploadThumbnail } from '../firebase/functions';
 import { setThumbnail } from '../firebase/functions';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import app from '../firebase/firebase';
+import { desc } from 'next-video/dist/cli/init.js';
+
 
 function Popup({ closePopup, show }) {
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [videoId, setVideoId] = useState();
-    const [thumbnailId, setThumbnailId] = useState();
-    const [videoUploaded, setVideoUploaded] = useState(false); // To track if the video has been uploaded
-    const [thumbnailUploaded, setThumbnailUploaded] = useState(false); // To track if the thumbnail has been uploaded
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [videoFile, setVideoFile] = useState<File | null>(null); // Store the video file
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null); // Store the thumbnail file
+  const [videoId, setVideoId] = useState<string | null>(null);
+  const [thumbnailId, setThumbnailId] = useState<string | null>(null);
+  const [videoUploaded, setVideoUploaded] = useState(false); // To track if the video has been uploaded
+  const [thumbnailUploaded, setThumbnailUploaded] = useState(false); // To track if the thumbnail has been uploaded
+  const [isSubmitting, setIsSubmitting] = useState(false); // To prevent multiple submissions
 
-    const functions = getFunctions(app); // Get Firebase functions instance
-    const callSetThumbnail = httpsCallable(functions, 'setThumbnail'); // Call the Cloud Function
 
-  // UseEffect to call setThumbnail once both videoId and thumbnailId are set and close the popup
+  // 1. when video or thumbnail files are changed, update the state variables, but don't call GCP function yet 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, type: string) => {
+    const file = event.target.files?.item(0);
+    if (file) {
+      if (type === 'video') {
+        setVideoFile(file); // Store video file in state
+      } else if (type === 'thumbnail') {
+        setThumbnailFile(file); // Store thumbnail file in state
+      }
+    }
+  };
+
+
+  // 2. When the submit button is clicked, call:
+  // handleUploadVideo: use GCP function to upload video, title, and description
+  // handleUploadThumbnail: use GCP function to upload thumbnail
+  // then call setThumbnail to link the video and thumbnail
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return; // Prevent multiple submissions
+
+    if (!title || !description || !videoFile || !thumbnailFile) {
+      alert("Please fill in all fields and upload both the video and thumbnail.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+
+      
+      // Upload video and thumbnail when submit is clicked
+      await handleUploadVideo(videoFile, title, description);
+      await handleUploadThumbnail(thumbnailFile);
+
+      console.log('video id', videoId)
+      console.log('thumbnail id', thumbnailId)
+
+
+      // Submit all the data
+      /* 
+      const videoData = { title, description, videoId, thumbnailId };
+      console.log('submitting video data: ', videoData)
+      await submitVideoData(videoData);
+      */
+
+      closePopup();
+    } catch (error) {
+      alert(`Failed to submit: ${error}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // useEffect to call setThumbnail when both videoId and thumbnailId are available
   useEffect(() => {
-    if (thumbnailId && videoId) {
-      const linkThumbnailToVideo = async () => {
+    if (videoId && thumbnailId) {
+      const linkThumbnail = async () => {
         try {
-          // Call the Cloud Function using httpsCallable
-          const response = await callSetThumbnail({ thumbnailId, videoId });
+          await setThumbnail(thumbnailId, videoId); // Link the thumbnail to the video
           alert('Thumbnail successfully linked to video.');
-          setThumbnailUploaded(true); // Mark thumbnail as uploaded
         } catch (error) {
-          alert(`Failed to link thumbnail: ${error}`);
+          console.error('Failed to link thumbnail:', error);
         }
       };
-      linkThumbnailToVideo();
-    }
-  }, [thumbnailId, videoId]);
 
-  // Automatically close popup when both video and thumbnail are uploaded
-  useEffect(() => {
-    if (videoUploaded && thumbnailUploaded) {
-      closePopup();
+      linkThumbnail();
     }
-  }, [videoUploaded, thumbnailUploaded, closePopup]);
+  }, [videoId, thumbnailId]); 
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, type: string) => {
-      const file = event.target.files?.item(0);
-      if (file) {
-        handleUpload(file, type);
+
+  // call firebase function to upload thumbnail to GCP
+  const handleUploadVideo = async (file: File, title: string, description: string) => {
+    if (file) {
+      try {
+        const response = await uploadVideo(file, title, description);
+        setVideoId(response.id);
+        setVideoUploaded(true); // Mark video as uploaded
+        alert(`Video uploaded successfully.`);
+        console.log('video upload response:', response)
+      } catch (error) {
+        alert(`Failed to upload video: ${error}`);
       }
-    }; 
+  }
+};
+
+  // call firebase function to upload thumbnail to GCP
+  const handleUploadThumbnail = async (file: File) => {
+    if (file) {
+      try {
+        const response = await uploadThumbnail(file);
+        setThumbnailId(response.id);
+        setThumbnailUploaded(true); // Mark thumbnail as uploaded
+        alert(`Thumbnail uploaded successfully.`);
+        console.log('thumbnail upload response:', response)
+      } catch (error) {
+        alert(`Failed to upload thumbnail: ${error}`);
+      }
+    }
+  };
+
+
   
-    const handleUpload = async (file: File, type: string) => {
-      if(type === 'video'){
-        try {
-          const response = await uploadVideo(file);
-          setVideoId(response.id);
-          setVideoUploaded(true); // Mark video as uploaded
-          alert(`Video uploaded successfully. Server responded with: ${JSON.stringify(response)}`);
-        } catch (error) {
-          alert(`Failed to upload video: ${error}`);
-        }
-      } else if(type === 'thumbnail'){
-        try {
-          const response = await uploadThumbnail(file);
-          setThumbnailId(response.id);
-          alert(`Thumbnail uploaded successfully. Server responded with: ${JSON.stringify(response)}`);
-        } catch (error) {
-          alert(`Failed to upload thumbnail: ${error}`);
-        }
-      }
-    };
+  const submitVideoData = async (videoData: { title: string, description: string, videoId: string, thumbnailId: string }) => {
+    // Handle the submission to Firebase here
+    console.log("Submitting data: ", videoData);
+  };
 
-  return (show ? (
-    <div className={popup_styles.popup_overlay}>
-      <div className={popup_styles.popup_content}>
-        <button className={popup_styles.close_button} onClick={closePopup}>
+  return show ? (
+    <div className={styles.popup_overlay}>
+      <div className={styles.popup_content}>
+        <button className={styles.close_button} onClick={closePopup}>
           &times;
         </button>
-        <h2>Upload</h2>
+        <h2 className={styles.popup_title}>Upload Video</h2>
 
-        {/* Show video upload button until video is uploaded */}
-        {!videoUploaded && (
-          <>
-            <input
-              id="upload-video"
-              className={popup_styles.upload_input}
-              type="file"
-              accept="video/*"
-              onChange={(e) => handleFileChange(e, 'video')}
-            />
-            <label htmlFor="upload-video" className={popup_styles.upload_button}>
-              Upload Video
-            </label>
-          </>
-        )}
+        {/* Input fields for title and description */}
+        <div>
+          <label>Title:</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Enter title"
+            className={styles.input}
+            required
+          />
+        </div>
 
-        {/* Show thumbnail upload button only after video is uploaded */}
-        {videoUploaded && !thumbnailUploaded && (
-          <>
-            <input
-              id="upload-thumbnail"
-              className={popup_styles.upload_input}
-              type="file"
-              accept="image/*"
-              onChange={(e) => handleFileChange(e, 'thumbnail')}
-            />
-            <label htmlFor="upload-thumbnail" className={popup_styles.upload_button}>
-              Upload Thumbnail
-            </label>
-          </>
+        <div>
+          <label>Description:</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Enter description"
+            className={styles.textarea}
+            required
+          />
+        </div>
+
+        {/* Show both video and thumbnail upload buttons at the same time */}
+        <div className={styles.btn_container}>
+          <input
+            id="upload-video"
+            className={styles.upload_input}
+            type="file"
+            accept="video/*"
+            onChange={(e) => handleFileChange(e, 'video')}
+          />
+          <label htmlFor="upload-video" className={styles.upload_button}>
+            Upload Video
+          </label>
+        </div>
+
+        <div className={styles.btn_container}>
+          <input
+            id="upload-thumbnail"
+            className={styles.upload_input}
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileChange(e, 'thumbnail')}
+          />
+          <label htmlFor="upload-thumbnail" className={styles.upload_button}>
+            Upload Thumbnail
+          </label>
+        </div>
+
+        {/* Submit button */}
+        {videoFile && thumbnailFile && (
+          <button
+            className={styles.submit_button}
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Submitting..." : "Submit"}
+          </button>
         )}
       </div>
     </div>
-  ) : (
-    ""
-  ));
+  ) : null;
 }
 
 export default Popup;

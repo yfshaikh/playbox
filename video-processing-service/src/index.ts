@@ -3,6 +3,7 @@ import { isThumbnailNew, isVideoNew, setThumbnail, setVideo } from "./firestore"
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
+import cors from 'cors';
 
 import { 
   uploadProcessedVideo,
@@ -22,6 +23,13 @@ setupDirectories();
 
 const app = express();
 app.use(express.json()); // Middleware to parse JSON bodies in incoming requests
+
+// Allow requests from localhost:3000
+app.use(cors({
+  origin: 'http://localhost:3000', // Replace with your frontend's URL
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
+}));
 
 
 // Configure multer for file uploads
@@ -62,13 +70,14 @@ app.post('/process-video', async (req, res) => {
   const outputFileName = `processed-${inputFileName}`; // Name of the processed video file
   const videoId = inputFileName.split('.')[0];
 
+
   if (!isVideoNew(videoId)) {
     return res.status(400).send('Bad Request: video already processing or processed.');
   } else {
     await setVideo(videoId, {
       id: videoId,
       uid: videoId.split('-')[0],
-      status: 'processing'
+      status: 'processing',
     });
   }
 
@@ -183,7 +192,10 @@ app.post('/process-thumbnail', async (req, res) => {
 
 
 
-const port = process.env.PORT || 3000;
+
+
+
+const port = process.env.PORT || 4000;
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });

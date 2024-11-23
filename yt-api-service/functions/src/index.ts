@@ -1,5 +1,8 @@
 /* eslint-disable */
 
+// entry point for callable firebase functions
+// these will be invoked in yt-web-client/.../functions.ts (client)
+
 
 import * as functions from "firebase-functions";
 import {initializeApp} from "firebase-admin/app";
@@ -65,7 +68,7 @@ export const generateUploadUrl = onCall({maxInstances: 1}, async (request) => {
   });
 
   return {url, fileName, id};
-});
+}); 
 
 // Cloud Function to handle new user creation
 export const createUser = functions.auth.user().onCreate((user) => {
@@ -165,6 +168,75 @@ export const setThumbnail = onCall({ maxInstances: 1 }, async (request: Callable
     throw new functions.https.HttpsError('internal', 'Error updating thumbnail');
   }
 });
+
+export const saveMetadata = onCall({ maxInstances: 1 }, async (request: CallableRequest<any>) => {
+  const { videoId, title, description } = request.data;
+
+  // Validate the input
+  if (!videoId || !title || !description) {
+    logger.error("Missing required fields");
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Video ID, title, and description are required."
+    );
+  }
+
+  try {
+    logger.info(`Saving metadata for video: ${videoId}`);
+    // Save metadata to Firestore
+    await firestore.collection("videos").doc(videoId).set({
+      title,
+      description,
+    });
+
+    logger.info("Metadata saved successfully");
+    return { success: true };
+  } catch (error) {
+    logger.error("Error saving metadata:", error);
+    throw new functions.https.HttpsError(
+      "internal",
+      "An error occurred while saving metadata."
+    );
+  }
+});
+
+// fetch video details from Firebase
+export const getVideoDetails = onCall({ maxInstances: 1 }, async (request: CallableRequest<any>) => {
+  const { videoId } = request.data;
+
+  // Validate the input
+  if (!videoId) {
+    logger.error("Missing required field: filename");
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Filename is required."
+    );
+  }
+
+  try {
+    logger.info(`Fetching details for video: ${videoId}`);
+    const videoDoc = await firestore.collection("videos").doc(videoId).get();
+
+    if (!videoDoc.exists) {
+      logger.error(`Video not found: ${videoId}`);
+      throw new functions.https.HttpsError(
+        "not-found",
+        "Video not found."
+      );
+    }
+
+    logger.info(`Video details found for: ${videoId}`);
+    return videoDoc.data();  // Return the video details
+  } catch (error) {
+    logger.error("Error fetching video details:", error);
+    throw new functions.https.HttpsError(
+      "internal",
+      "An error occurred while fetching video details."
+    );
+  }
+});
+
+
 
 
 
