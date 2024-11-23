@@ -73,13 +73,13 @@ app.post('/process-video', async (req, res) => {
     { height: 720, suffix: '_720p' },
   ];
 
-  try {
-    // Check if the video is already being processed or processed
-    if (!isVideoNew(videoId)) {
-      return res.status(400).send('Bad Request: video already processing or processed.');
-    }
-
+  // Check if the video is already being processed or processed
+  console.log(`CHECKING IF VIDEO WITH ID ${videoId} IS ALREADY PROCESSING `)
+  if (!isVideoNew(videoId)) {
+    return res.status(400).send('Bad Request: video already processing or processed.');
+  } else {
     // Update database: Mark video as processing
+    console.log(`${videoId} IS NOT PROCESSING, GOING TO START PROCESSING. STATUS SET TO PROCESSING`)
     await setVideo(videoId, {
       id: videoId,
       uid: videoId.split('-')[0],
@@ -87,7 +87,12 @@ app.post('/process-video', async (req, res) => {
     });
 
     // Download the raw video file from Cloud Storage
+    console.log(`CALLED DOWNLOADRAWVIDEO ON ${inputFileName}`)
     await downloadRawVideo(inputFileName);
+  }
+
+  try {
+
 
     // Process the video for each resolution concurrently
     const processedFiles = await Promise.all(
@@ -99,6 +104,7 @@ app.post('/process-video', async (req, res) => {
       })
     );
 
+    console.log(`SET VIDEO WITH ID ${videoId} TO PROCESSED`)
     // Update the database: Mark video as processed and include file details
     await setVideo(videoId, {
       status: 'processed',
@@ -106,7 +112,14 @@ app.post('/process-video', async (req, res) => {
     });
 
     // Delete the raw video file after processing
-    await deleteRawVideo(inputFileName);
+    await Promise.all([
+      deleteRawVideo(inputFileName),
+      resolutions.map(async ({ height, suffix }) => {
+        const outputFileName = `${baseOutputFileName}${suffix}.mp4`;
+        await deleteProcessedVideo(outputFileName);
+      })
+    ]);
+
 
     console.log('Video processing completed successfully');
     return res.status(200).send('Processing finished successfully');

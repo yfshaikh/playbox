@@ -70,10 +70,31 @@ export function setThumbnail(thumbnailId: string, thumbnail: Thumbnail) {
 }
 
 
-export async function isVideoNew(videoId: string) {
-  const video = await getVideo(videoId);
-  return video?.status === undefined;
+export async function isVideoNew(videoId: string): Promise<boolean> {
+  try {
+    const video = await getVideo(videoId);
+
+    // Check if the video exists and its status
+    if (!video) {
+      console.log(`Video ${videoId} does not exist. Treating it as new.`);
+      return true; // Video does not exist, so it's new
+    }
+
+    const { status } = video;
+
+    if (status === 'processing' || status === 'processed') {
+      console.log(`Video ${videoId} is already ${status}.`);
+      return false; // Video is already being processed or processed
+    }
+
+    console.log(`Video ${videoId} is new (status: ${status || 'undefined'}).`);
+    return true; // Video exists but is new
+  } catch (error) {
+    console.error(`Error checking video status for ${videoId}:`, error);
+    return false; // Fail-safe: assume video is not new to avoid duplicate processing
+  }
 }
+
 
 export async function isThumbnailNew(thumbnailId: string) {
   const thumbnail = await getThumbnail(thumbnailId);
