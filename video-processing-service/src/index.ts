@@ -46,72 +46,84 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// Process a video file from Cloud Storage into 360p
+// Process a video file from Cloud Storage into multiple resolutions (360p and 720p)
 app.post('/process-video', async (req, res) => {
-
-  // Get the bucket and filename from the Cloud Pub/Sub message
   let data;
+
   try {
-    // Cloud Pub/Sub sends messages in base64, decode and parse to JSON
+    // Decode and parse the Cloud Pub/Sub message
     const message = Buffer.from(req.body.message.data, 'base64').toString('utf8');
     data = JSON.parse(message);
 
-    // Check if required fields are present
     if (!data.name) {
       throw new Error('Invalid message payload received.');
     }
   } catch (error) {
-    console.error(error); 
+    console.error('Error decoding Pub/Sub message:', error);
     return res.status(400).send('Bad Request: missing filename.');
   }
 
-  // Define the input and output filenames based on the message
-  const inputFileName = data.name; // Name of the raw video file
-  const outputFileName = `processed-${inputFileName}`; // Name of the processed video file
+  const inputFileName = data.name; // Raw video file name
+  const baseOutputFileName = `processed-${inputFileName.split('.')[0]}`; // Base name for processed files
   const videoId = inputFileName.split('.')[0];
 
+  // Define resolutions to process
+  const resolutions = [
+    { height: 360, suffix: '_360p' },
+    { height: 720, suffix: '_720p' },
+  ];
 
-  if (!isVideoNew(videoId)) {
-    return res.status(400).send('Bad Request: video already processing or processed.');
-  } else {
+  try {
+    // Check if the video is already being processed or processed
+    if (!isVideoNew(videoId)) {
+      return res.status(400).send('Bad Request: video already processing or processed.');
+    }
+
+    // Update database: Mark video as processing
     await setVideo(videoId, {
       id: videoId,
       uid: videoId.split('-')[0],
       status: 'processing',
     });
-  }
 
-  // Download the raw video from Cloud Storage
-  await downloadRawVideo(inputFileName);
+    // Download the raw video file from Cloud Storage
+    await downloadRawVideo(inputFileName);
 
-  // Process the video into 360p
-  try { 
-    await convertVideo(inputFileName, outputFileName)
-  } catch (err: any) {
-    // If processing fails, clean up by deleting both raw and processed videos
+    // Process the video for each resolution concurrently
+    const processedFiles = await Promise.all(
+      resolutions.map(async ({ height, suffix }) => {
+        const outputFileName = `${baseOutputFileName}${suffix}.mp4`;
+        await convertVideo(inputFileName, outputFileName, height);
+        await uploadProcessedVideo(outputFileName);
+        return { resolution: `${height}p`, filename: outputFileName };
+      })
+    );
+
+    // Update the database: Mark video as processed and include file details
+    await setVideo(videoId, {
+      status: 'processed',
+      files: processedFiles, // Include details of processed files
+    });
+
+    // Delete the raw video file after processing
+    await deleteRawVideo(inputFileName);
+
+    console.log('Video processing completed successfully');
+    return res.status(200).send('Processing finished successfully');
+  } catch (error: any) {
+    console.error('Error during video processing:', error);
+
+    // Cleanup: Delete raw and any partially processed videos
     await Promise.all([
       deleteRawVideo(inputFileName),
-      deleteProcessedVideo(outputFileName)
+      ...resolutions.map(({ suffix }) => deleteProcessedVideo(`${baseOutputFileName}${suffix}.mp4`)),
     ]);
-    return res.status(500).send('Processing failed' + err.message);
+
+    return res.status(500).send('Processing failed: ' + error.message);
   }
-  
-  // Upload the processed video to Cloud Storage
-  await uploadProcessedVideo(outputFileName);
-
-  await setVideo(videoId, {
-    status: 'processed',
-    filename: outputFileName
-  });
-
-  // If processing fails, clean up by deleting both raw and processed videos
-  await Promise.all([
-    deleteRawVideo(inputFileName),
-    deleteProcessedVideo(outputFileName)
-  ]);
-
-  return res.status(200).send('Processing finished successfully');
 });
+
+
 
 
 // Define the process-thumbnail endpoint

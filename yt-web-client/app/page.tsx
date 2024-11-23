@@ -11,11 +11,14 @@ export default async function Home() {
   return (
     <main className={styles.main}>
       <div className={styles.video_container}>
-        {videos.map((video) => (
-          <Link href={`/watch?v=${video.filename}`} key={video.id}>
-              <Thumbnail thumbnailId={video.thumbnail} />
+      {videos.map((video) => {
+        const file = video.files?.[0]?.filename || null;
+        return file ? (
+          <Link href={`/watch?v=${file.split('_360p.mp4')[0]}`} key={video.id}>
+            <Thumbnail thumbnailId={video.thumbnail} />
           </Link>
-        ))}
+        ) : null;
+      })}
       </div>
     </main>
   );

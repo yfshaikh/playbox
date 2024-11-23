@@ -92,13 +92,17 @@ export const createUser = functions.auth.user().onCreate((user) => {
 const videoCollectionId = "videos";
 
 export interface Video {
-  id?: string,
-  uid?: string,
-  filename?: string,
-  status?: "processing" | "processed",
-  title?: string,
-  description?: string,
-  thumbnail?: string,
+  id?: string; // Unique identifier for the video
+  uid?: string; // User ID associated with the video
+  filename?: string; // Name of the file in storage
+  status?: 'processing' | 'processed'; // Status of the video processing
+  title?: string; // Title of the video
+  description?: string; // Description of the video
+  thumbnail?: string; 
+  files?: { 
+    resolution: string; // Resolution of the video (e.g., 360p, 720p)
+    filename: string; // Processed filename for the given resolution
+  }[]; // List of processed video files with resolutions
 }
 
 export const getVideos = onCall({maxInstances: 1}, async () => {

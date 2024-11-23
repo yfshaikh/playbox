@@ -13,13 +13,14 @@
 
 .popup_content {
   background-color: white;
-  padding: 40px; /* Increased padding for larger space inside */
+  padding: 50px; /* Increased padding for larger space inside */
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   width: 600px; /* Increased width for a larger popup */
   position: relative;
   max-width: 100%;
   box-sizing: border-box;
+  align-items: center;
 }
 
 .close_button {
@@ -62,7 +63,7 @@
   cursor: pointer;
   text-align: center;
   display: inline-block;
-  width: 100%;
+  width: 50%;
   margin-top: 15px; /* Adjusted for more space */
 }
 

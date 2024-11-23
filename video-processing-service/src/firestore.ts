@@ -22,14 +22,19 @@ const videoCollectionId = 'videos';
 const thumbnailCollectionId = 'thumbnails';
 
 export interface Video {
-  id?: string,
-  uid?: string,
-  filename?: string,
-  status?: 'processing' | 'processed',
-  title?: string,
-  description?: string,
-  thumbnailUrl?: string, // URL of the thumbnail image
+  id?: string; // Unique identifier for the video
+  uid?: string; // User ID associated with the video
+  filename?: string; // Name of the file in storage
+  status?: 'processing' | 'processed'; // Status of the video processing
+  title?: string; // Title of the video
+  description?: string; // Description of the video
+  thumbnail?: string; 
+  files?: { 
+    resolution: string; // Resolution of the video (e.g., 360p, 720p)
+    filename: string; // Processed filename for the given resolution
+  }[]; // List of processed video files with resolutions
 }
+
 
 export interface Thumbnail {
   id?: string,

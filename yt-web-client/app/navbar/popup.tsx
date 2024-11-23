@@ -74,7 +74,7 @@ function Popup({ closePopup, show }) {
     }
   };
 
-  // useEffect to call setThumbnail when both videoId and thumbnailId are available
+  // 3. useEffect to call setThumbnail when both videoId and thumbnailId are available
   useEffect(() => {
     if (videoId && thumbnailId) {
       const linkThumbnail = async () => {
@@ -122,12 +122,6 @@ function Popup({ closePopup, show }) {
   };
 
 
-  
-  const submitVideoData = async (videoData: { title: string, description: string, videoId: string, thumbnailId: string }) => {
-    // Handle the submission to Firebase here
-    console.log("Submitting data: ", videoData);
-  };
-
   return show ? (
     <div className={styles.popup_overlay}>
       <div className={styles.popup_content}>
@@ -136,6 +130,7 @@ function Popup({ closePopup, show }) {
         </button>
         <h2 className={styles.popup_title}>Upload Video</h2>
 
+        <div>
         {/* Input fields for title and description */}
         <div>
           <label>Title:</label>
@@ -197,6 +192,7 @@ function Popup({ closePopup, show }) {
             {isSubmitting ? "Submitting..." : "Submit"}
           </button>
         )}
+        </div>
       </div>
     </div>
   ) : null;

@@ -33,35 +33,31 @@ export function setupDirectories() {
 }
 
 /**
- * Converts a video file from raw format to a processed 360p MP4 format.
+ * Converts a video file from raw format to processed MP4 format.
  * @param rawVideoName - The name of the file to convert from {@link localRawVideoPath}.
- * @param processedVideoName - The name of the file to convert to {@link localProcessedVideoPath}.
- * @returns A promise that resolves when the video has been converted.
+ * @param processedVideoName - The base name of the processed file (without resolution).
+ * @param height - The target resolution height (e.g., 360, 720).
+ * @returns A promise that resolves when the video has been converted to the specified resolution.
  */
-export function convertVideo(rawVideoName: string, processedVideoName: string) {
+export function convertVideo(rawVideoName: string, processedVideoName: string, height: number) {
   return new Promise<void>((resolve, reject) => {
-    // Ensure the processed video name ends with .mp4
     const outputFileName = processedVideoName.endsWith(".mp4")
       ? processedVideoName
       : `${processedVideoName.split(".")[0]}.mp4`;
 
     ffmpeg(`${localRawVideoPath}/${rawVideoName}`)
-      .outputOptions("-vf", "scale=-1:360") // Video filter: scale to 360p
-      .outputOptions("-c:v", "libx264") // Video codec: H.264 for MP4
-      .outputOptions("-preset", "fast") // Encoding speed: balance between speed and compression
-      .outputOptions("-crf", "23") // Quality setting: 0 (lossless) to 51 (worst)
-      .outputOptions("-c:a", "aac") // Audio codec: AAC for MP4
-      .on("end", function () { // When completed successfully
-        console.log("Processing finished successfully");
-        resolve(); // Resolve the promise
-      })
-      .on("error", function (err: any) { // On error
-        console.error("An error occurred: " + err.message);
-        reject(err); // Reject the promise with the error
-      })
-      .save(`${localProcessedVideoPath}/${outputFileName}`); // Save processed video to local path
+      .outputOptions("-vf", `scale=-1:${height}`) // Scale to dynamic height
+      .outputOptions("-c:v", "libx264")
+      .outputOptions("-preset", "fast")
+      .outputOptions("-crf", "23")
+      .outputOptions("-c:a", "aac")
+      .on("end", () => resolve())
+      .on("error", (err: any) => reject(err))
+      .save(`${localProcessedVideoPath}/${outputFileName}`);
   });
 }
+
+
 
 
 

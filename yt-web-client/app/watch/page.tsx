@@ -16,13 +16,22 @@ interface VideoDetails {
 
 
 export default function Watch() {
-  const videoPrefix = 'https://storage.googleapis.com/processed-videos-yt/';
-  const fileName = useSearchParams().get('v');
-  const videoId = fileName?.split('processed-')[1]?.split('.mov')[0];
-  const videoSrc = fileName?.endsWith('.mp4') ? fileName : `${fileName?.split(".")[0]}.mp4`;
   const [videoDetails, setVideoDetails] = useState<VideoDetails | null>(null);
+  const [resolution, setResolution] = useState('360p')
+  const videoPrefix = 'https://storage.googleapis.com/processed-videos-yt/'; // cloud bucket prefix
+  const fileName = useSearchParams().get('v'); 
+  const videoId = fileName?.split('processed-')[1]?.split('.mov')[0].split('_720p.mp4')[0]; 
+  // const videoSrc = fileName?.endsWith('.mp4') ? fileName : `${fileName?.split(".")[0]}.mp4`; // force mp4 extension
+  const [videoUrl, setVideoUrl] = useState(`${videoPrefix}processed-${videoId}_${resolution}.mp4`);
 
 
+  // Update the video URL whenever the resolution changes
+  useEffect(() => {
+    if (videoId) {
+      const updatedVideoUrl = `${videoPrefix}processed-${videoId}_${resolution}.mp4`;
+      setVideoUrl(updatedVideoUrl);
+    }
+  }, [resolution, videoId]); // This ensures the video URL updates when resolution or videoId changes
 
   
   useEffect(() => {
@@ -52,25 +61,46 @@ export default function Watch() {
 
 
 
+
   return (
     <>
-    {videoSrc &&
-    <div className={styles.video_container}>
-      <Container maxWidth="md">
-      {videoDetails && (
-          <h1 className={styles.video_title}>{videoDetails.title}</h1>
-        )}
-        <Player src={`${videoPrefix}${videoSrc}`} accentColor="blue" />
+      {videoUrl && (
+        <div className={styles.video_container}>
+          <Container maxWidth="md">
+            {videoDetails && <h1 className={styles.video_title}>{videoDetails.title}</h1>}
+            <Player src={videoUrl} accentColor="blue" />
 
-        {videoDetails && (
-          <div className={styles.video_details}>
-            <p className={styles.video_description}>{videoDetails.description}</p>
-          </div>
-        )}
-      </Container>
-    </div>
-    }
-  </>
+            {/* Button Container */}
+            <div className={styles.button_container}>
+              <button
+                className={`${styles.button} ${
+                  resolution === '360p' ? styles.active : ''
+                }`}
+                onClick={() => setResolution('360p')}
+              >
+                360p
+              </button>
+              <button
+                className={`${styles.button} ${
+                  resolution === '720p' ? styles.active : ''
+                }`}
+                onClick={() => setResolution('720p')}
+              >
+                720p
+              </button>
+            </div>
+
+            {videoDetails && (
+              <div className={styles.video_details}>
+                <p className={styles.video_description}>{videoDetails.description}</p>
+              </div>
+            )}
+          </Container>
+        </div>
+      )}
+    </>
   );
 }
+
+
 
