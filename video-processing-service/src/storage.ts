@@ -48,21 +48,38 @@ export function convertVideo(rawVideoName: string, processedVideoName: string, h
     const inputFile = `${localRawVideoPath}/${rawVideoName}`;
     const outputFile = `${localProcessedVideoPath}/${outputFileName}`;
 
+    console.log(`Starting conversion of ${rawVideoName} to ${height}p`);
+
+    // Check the metadata of the input file
     ffmpeg.ffprobe(inputFile, (err, metadata) => {
       if (err) {
+        console.error('Error fetching metadata:', err);
         reject(err);
       } else {
-        const frameRate = metadata.streams[0].r_frame_rate; // Get the frame rate of the original video
+        console.log('Input video metadata:', metadata);
+
+        const frameRate = metadata.streams[0]?.r_frame_rate;
+        console.log(`Frame rate of input video: ${frameRate}`);
 
         ffmpeg(inputFile)
-          .outputOptions("-vf", `scale=-1:${height}`)
-          .on("end", () => resolve())
-          .on("error", (err: any) => reject(err))
+          .outputOptions('-vf', `scale=-1:${height}`)
+          .on('start', (commandLine) => {
+            console.log('Spawned ffmpeg with command:', commandLine);
+          })
+          .on('end', () => {
+            console.log(`Successfully processed ${rawVideoName} to ${height}p`);
+            resolve();
+          })
+          .on('error', (err: any) => {
+            console.error('Error during processing:', err);
+            reject(err);
+          })
           .save(outputFile);
       }
     });
   });
 }
+
 
 
 
