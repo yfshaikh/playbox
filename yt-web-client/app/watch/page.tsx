@@ -3,10 +3,10 @@
 import { useSearchParams } from 'next/navigation'
 import React from 'react'
 import styles from './watch.module.css';
-import { Container } from "@material-ui/core";
+import { Container } from "@mui/material"
 import Video from 'next-video';
 import { fetchVideoDetails } from '../firebase/functions'
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import Player from 'next-video/player';
 
 interface VideoDetails {
@@ -15,7 +15,7 @@ interface VideoDetails {
 }
 
 
-export default function Watch() {
+function VideoContent() {
   const [videoDetails, setVideoDetails] = useState<VideoDetails | null>(null);
   const [resolution, setResolution] = useState('360p')
   const videoPrefix = 'https://storage.googleapis.com/processed-videos-yt/'; // cloud bucket prefix
@@ -99,6 +99,14 @@ export default function Watch() {
       )}
     </>
   );
+}
+
+export default function Watch() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <VideoContent />
+    </Suspense>
+  )
 }
 
 

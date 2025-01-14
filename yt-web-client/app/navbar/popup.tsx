@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import styles from './Popup.module.css'; // Import the CSS module
+import styles from './popup.module.css'; // Import the CSS module
 import { uploadVideo } from '../firebase/functions';
 import { uploadThumbnail } from '../firebase/functions';
 import { setThumbnail } from '../firebase/functions';
