@@ -26,7 +26,7 @@ function NavBar() {
             <Image 
               width={64} 
               height={64}
-              src="/playbox.png" 
+              src="/playbox-removebg-preview.png" 
               alt="Logo"
               className="object-contain"
             />
