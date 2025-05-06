@@ -1,5 +1,4 @@
 import { signInWithGoogle, signOut } from '../firebase/firebase';
-import styles from './signIn.module.css';
 import { User } from 'firebase/auth';
 
 
@@ -13,12 +12,12 @@ export default function SignIn({ user }: SignInProps) {
     <div>
       {user ? (
         // If user is signed in, show a welcome message (or something else)
-        <button className={styles.signin} onClick={signOut}>
+        <button className="inline-block border border-white/50 text-white py-2.5 px-5 rounded-full font-sans text-sm font-medium cursor-pointer transition-colors duration-200 hover:bg-white/10" onClick={signOut}>
           Sign Out
         </button>
       ) : (
         // If user is not signed in, show sign-in button
-        <button className={styles.signin} onClick={signInWithGoogle}>
+        <button className="inline-block border border-white/50 text-white py-2.5 px-5 rounded-full font-sans text-sm font-medium cursor-pointer transition-colors duration-200 hover:bg-white/10" onClick={signInWithGoogle}>
           Sign in
         </button>
       )}
