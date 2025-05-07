@@ -1,0 +1,13 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      [
+        'build',
+        '--tag=us-central1-docker.pkg.dev/yt-clone-6be4c/web-client-repo/yt-web-client:latest',
+        '--build-arg', 'NEXT_PUBLIC_FIREBASE_API_KEY=${_NEXT_PUBLIC_FIREBASE_API_KEY}',
+        '--build-arg', 'MUX_TOKEN_ID=${_MUX_TOKEN_ID}',
+        '--build-arg', 'MUX_TOKEN_SECRET=${_MUX_TOKEN_SECRET}',
+        '.'
+      ]
+images:
+  - us-central1-docker.pkg.dev/yt-clone-6be4c/web-client-repo/yt-web-client:latest
